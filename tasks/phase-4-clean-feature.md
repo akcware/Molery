@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: Clean Feature
-status: pending
+status: done
 depends-on: [phase-3]
 ---
 

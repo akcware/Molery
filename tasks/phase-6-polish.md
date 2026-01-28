@@ -1,7 +1,7 @@
 ---
 phase: 6
 title: Polish
-status: pending
+status: done
 depends-on: [phase-5]
 ---
 

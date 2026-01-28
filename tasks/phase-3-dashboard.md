@@ -1,7 +1,7 @@
 ---
 phase: 3
 title: Dashboard
-status: pending
+status: done
 depends-on: [phase-2]
 ---
 

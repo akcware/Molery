@@ -2,6 +2,8 @@
 
 macOS desktop GUI for the [Mole CLI](https://github.com/tw93/Mole) (`mo`) - a system optimizer for cleaning caches, analyzing disk usage, and managing system resources.
 
+**Status**: MVP-ready with all core features implemented
+
 ## Tech Stack
 
 - **Frontend**: Svelte 5 + TypeScript + TailwindCSS

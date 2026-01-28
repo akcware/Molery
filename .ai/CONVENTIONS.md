@@ -7,7 +7,7 @@
 | Svelte Components | PascalCase | `StatCard.svelte` |
 | TypeScript modules | camelCase | `cleanService.ts` |
 | Type definitions | camelCase with `.types.ts` | `clean.types.ts` |
-| Stores | camelCase with `.store.ts` | `clean.store.ts` |
+| Stores | camelCase with `.store.svelte.ts` | `clean.store.svelte.ts` |
 | Rust modules | snake_case | `clean_commands.rs` |
 
 ## Directory Structure
@@ -16,11 +16,14 @@
 src/
 ├── lib/
 │   ├── components/      # Reusable UI components
-│   │   ├── ui/          # Base components (Button, Card, etc.)
-│   │   └── features/    # Feature-specific components
+│   │   ├── ui/          # Base components (Button, Card, Modal, etc.)
+│   │   ├── layout/      # Layout components (Header, Sidebar, Layout)
+│   │   └── features/    # Feature panels (Dashboard, CleanPanel, etc.)
 │   ├── services/        # Tauri invoke wrappers
-│   ├── stores/          # Svelte 5 runes-based stores
-│   └── types/           # TypeScript type definitions
+│   ├── stores/          # Svelte 5 runes-based stores (.store.svelte.ts)
+│   ├── types/           # TypeScript type definitions
+│   ├── utils/           # Utility functions (format.ts)
+│   └── hooks/           # Svelte hooks (useKeyboard.ts)
 ├── routes/              # SvelteKit pages
 └── app.html             # HTML template
 ```

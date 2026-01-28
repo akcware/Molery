@@ -57,7 +57,7 @@ User Action → Svelte Component → Service → invoke() → Rust Command → m
 5. Returns structured `ScanResult` to frontend
 6. Store updates, UI re-renders with cleanup items
 
-## Target File Structure
+## File Structure
 
 ```
 Molery/
@@ -88,31 +88,48 @@ Molery/
 │   │   │   ├── ui/                   # Base components
 │   │   │   │   ├── Button.svelte
 │   │   │   │   ├── Card.svelte
+│   │   │   │   ├── ConfirmDialog.svelte
+│   │   │   │   ├── Modal.svelte
+│   │   │   │   ├── ProgressBar.svelte
+│   │   │   │   ├── Skeleton.svelte
+│   │   │   │   ├── Spinner.svelte
 │   │   │   │   ├── StatCard.svelte
-│   │   │   │   └── Toast.svelte
+│   │   │   │   ├── Toast.svelte
+│   │   │   │   └── ToastContainer.svelte
 │   │   │   ├── layout/
 │   │   │   │   ├── Header.svelte
 │   │   │   │   ├── Sidebar.svelte
 │   │   │   │   └── Layout.svelte
 │   │   │   └── features/
+│   │   │       ├── Dashboard.svelte
 │   │   │       ├── CleanPanel.svelte
 │   │   │       ├── UninstallPanel.svelte
 │   │   │       ├── AnalyzePanel.svelte
 │   │   │       ├── OptimizePanel.svelte
-│   │   │       └── StatusPanel.svelte
+│   │   │       ├── StatusPanel.svelte
+│   │   │       └── SetupScreen.svelte
 │   │   ├── services/
 │   │   │   ├── cleanService.ts
 │   │   │   ├── uninstallService.ts
 │   │   │   ├── analyzeService.ts
+│   │   │   ├── optimizeService.ts
 │   │   │   └── statusService.ts
 │   │   ├── stores/
-│   │   │   ├── clean.store.ts
-│   │   │   ├── ui.store.ts
-│   │   │   └── toast.store.ts
-│   │   └── types/
-│   │       ├── clean.types.ts
-│   │       ├── uninstall.types.ts
-│   │       └── common.types.ts
+│   │   │   ├── clean.store.svelte.ts
+│   │   │   ├── status.store.svelte.ts
+│   │   │   ├── uninstall.store.svelte.ts
+│   │   │   ├── ui.store.svelte.ts
+│   │   │   └── toast.store.svelte.ts
+│   │   ├── types/
+│   │   │   ├── analyze.types.ts
+│   │   │   ├── clean.types.ts
+│   │   │   ├── common.types.ts
+│   │   │   ├── status.types.ts
+│   │   │   └── uninstall.types.ts
+│   │   ├── utils/
+│   │   │   └── format.ts
+│   │   └── hooks/
+│   │       └── useKeyboard.ts
 │   └── routes/
 │       ├── +layout.svelte
 │       ├── +layout.ts
@@ -124,10 +141,11 @@ Molery/
 │   │   ├── lib.rs
 │   │   └── commands/
 │   │       ├── mod.rs
-│   │       ├── clean.rs
-│   │       ├── uninstall.rs
 │   │       ├── analyze.rs
-│   │       └── status.rs
+│   │       ├── clean.rs
+│   │       ├── optimize.rs
+│   │       ├── status.rs
+│   │       └── uninstall.rs
 │   ├── Cargo.toml
 │   ├── tauri.conf.json
 │   └── capabilities/
@@ -149,20 +167,25 @@ Molery/
 
 ```
 +layout.svelte
-└── Layout.svelte
-    ├── Header.svelte
-    ├── Sidebar.svelte
-    │   └── Navigation items
-    └── Main Content Area
-        └── +page.svelte
-            ├── Dashboard (default view)
-            │   └── StatCard.svelte (×4)
-            └── Feature Panels (tab-based)
-                ├── CleanPanel.svelte
-                ├── UninstallPanel.svelte
-                ├── AnalyzePanel.svelte
-                ├── OptimizePanel.svelte
-                └── StatusPanel.svelte
+├── ToastContainer.svelte
+└── +page.svelte
+    ├── SetupScreen.svelte (if mo not installed)
+    └── Layout.svelte (if mo installed)
+        ├── Header.svelte
+        ├── Sidebar.svelte
+        │   └── Navigation items (6 panels)
+        └── Main Content Area
+            ├── Dashboard.svelte (default)
+            │   └── StatCard.svelte (×7)
+            ├── CleanPanel.svelte
+            │   └── ConfirmDialog.svelte
+            ├── UninstallPanel.svelte
+            │   └── Modal.svelte
+            ├── AnalyzePanel.svelte
+            │   └── ProgressBar.svelte
+            ├── OptimizePanel.svelte
+            └── StatusPanel.svelte
+                └── ProgressBar.svelte
 ```
 
 ## State Management
@@ -171,9 +194,11 @@ Molery/
 
 | Store | Purpose |
 |-------|---------|
-| `ui.store.ts` | Active panel, sidebar state, theme |
-| `toast.store.ts` | Notification queue |
-| `clean.store.ts` | Scan results, cleanup state |
+| `ui.store.svelte.ts` | Active panel, sidebar state, panel switching |
+| `toast.store.svelte.ts` | Notification queue with success/error/warning/info helpers |
+| `clean.store.svelte.ts` | Scan results, selected categories, cleanup state |
+| `status.store.svelte.ts` | System status cache, background refresh, derived getters |
+| `uninstall.store.svelte.ts` | App list with cache, loading state |
 
 ### Local State
 

@@ -1,7 +1,7 @@
 ---
 phase: 1
 title: Foundation
-status: pending
+status: done
 depends-on: null
 ---
 

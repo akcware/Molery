@@ -1,7 +1,7 @@
 ---
 phase: 2
 title: UI Shell
-status: pending
+status: done
 depends-on: [phase-1]
 ---
 

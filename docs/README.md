@@ -6,7 +6,7 @@
 
 | Document | Description |
 |----------|-------------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, data flow, target file structure |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, data flow, file structure |
 
 ### Technical Specifications
 

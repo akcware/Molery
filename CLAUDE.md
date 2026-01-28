@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Molery is a macOS desktop GUI for the [Mole CLI](https://github.com/tw93/Mole) (`mo`) - a system optimizer for cleaning caches, analyzing disk usage, and managing system resources. Built with Tauri 2.x (Rust backend) + Svelte 5 (frontend).
 
-**Current State:** Pre-development (template state). Comprehensive documentation exists in `docs/` and `tasks/` but no feature code implemented yet.
+**Current State:** MVP-ready with all core features implemented. Dashboard, Clean, Uninstall, Analyze, Optimize, and Status panels are fully functional.
 
 ## Agent Guidelines
 
@@ -49,16 +49,18 @@ Frontend (Svelte 5)  →  IPC (invoke)  →  Tauri Backend (Rust)  →  mo CLI
 | Rust Backend | `src-tauri/src/lib.rs` |
 | Tauri Config | `src-tauri/tauri.conf.json` |
 
-### Planned Directory Structure (src/lib/)
+### Directory Structure (src/lib/)
 
 ```
 components/
-├── ui/           # Base: Button, Card, StatCard, Toast
+├── ui/           # Button, Card, Modal, ConfirmDialog, StatCard, Toast, Spinner, Skeleton, ProgressBar
 ├── layout/       # Header, Sidebar, Layout
-└── features/     # CleanPanel, UninstallPanel, AnalyzePanel, etc.
-services/         # Tauri invoke wrappers (cleanService.ts, etc.)
-stores/           # Svelte 5 runes-based state (ui.store.ts, etc.)
-types/            # TypeScript definitions (clean.types.ts, etc.)
+└── features/     # Dashboard, CleanPanel, UninstallPanel, AnalyzePanel, OptimizePanel, StatusPanel, SetupScreen
+services/         # Tauri invoke wrappers (cleanService.ts, statusService.ts, etc.)
+stores/           # Svelte 5 runes-based state (.store.svelte.ts files)
+types/            # TypeScript definitions (clean.types.ts, status.types.ts, etc.)
+utils/            # Formatting utilities (format.ts)
+hooks/            # Keyboard handler (useKeyboard.ts)
 ```
 
 ## Code Patterns
@@ -100,7 +102,7 @@ async fn scan_cleanup() -> Result<ScanResult, String> {
 | Svelte Components | PascalCase | `StatCard.svelte` |
 | TypeScript modules | camelCase | `cleanService.ts` |
 | Type definitions | `.types.ts` | `clean.types.ts` |
-| Stores | `.store.ts` | `clean.store.ts` |
+| Stores | `.store.svelte.ts` | `clean.store.svelte.ts` |
 | Rust modules | snake_case | `clean_commands.rs` |
 
 ## Key Documentation
@@ -117,7 +119,7 @@ async fn scan_cleanup() -> Result<ScanResult, String> {
 
 ## Development Phases
 
-Follow `tasks/phase-*.md` files sequentially. Each phase has detailed deliverables and implementation steps. Current: Phase 1 - Foundation.
+All 6 development phases are complete. See `tasks/phase-*.md` files for implementation details and checklists.
 
 ## mo CLI Commands Reference
 
