@@ -2,23 +2,12 @@
   import { onMount } from 'svelte';
   import StatCard from '$lib/components/ui/StatCard.svelte';
   import Button from '$lib/components/ui/Button.svelte';
-  import { getStatus } from '$lib/services/statusService';
   import { formatBytes, formatPercentage } from '$lib/utils/format';
   import { uiStore } from '$lib/stores/ui.store.svelte';
-  import type { SystemStatus } from '$lib/types/status.types';
+  import { statusStore } from '$lib/stores/status.store.svelte';
 
-  let status = $state<SystemStatus | null>(null);
-  let loading = $state(true);
-  let error = $state<string | null>(null);
-
-  onMount(async () => {
-    try {
-      status = await getStatus();
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load status';
-    } finally {
-      loading = false;
-    }
+  onMount(() => {
+    statusStore.loadStatus();
   });
 </script>
 
@@ -28,7 +17,7 @@
     <p class="text-content-secondary">Your system optimization dashboard</p>
   </div>
 
-  {#if loading}
+  {#if statusStore.loading}
     <div class="grid grid-cols-4 gap-4">
       {#each [1, 2, 3, 4] as _}
         <div class="bg-surface-secondary rounded-xl p-4 animate-pulse">
@@ -37,34 +26,34 @@
         </div>
       {/each}
     </div>
-  {:else if error}
+  {:else if statusStore.error}
     <div class="bg-accent-red/10 border border-accent-red rounded-lg p-4 text-accent-red">
-      {error}
+      {statusStore.error}
     </div>
-  {:else if status}
+  {:else if statusStore.status}
     <div class="grid grid-cols-4 gap-4">
       <StatCard
         icon="📦"
-        value={formatBytes(status.diskUsed)}
+        value={formatBytes(statusStore.status.diskUsed)}
         label="Disk Used"
-        sublabel={formatPercentage(status.diskUsed, status.diskTotal)}
+        sublabel={formatPercentage(statusStore.status.diskUsed, statusStore.status.diskTotal)}
       />
       <StatCard
         icon="🧹"
-        value={formatBytes(status.cleanableSize)}
+        value={formatBytes(statusStore.status.cleanableSize)}
         label="Cleanable"
         onclick={() => uiStore.setPanel('clean')}
       />
       <StatCard
         icon="💾"
-        value={formatBytes(status.diskAvailable)}
+        value={formatBytes(statusStore.status.diskAvailable)}
         label="Available"
       />
       <StatCard
         icon="✓"
-        value={status.moVersion !== 'Not installed' ? 'Ready' : 'Setup'}
+        value={statusStore.status.moVersion !== 'Not installed' ? 'Ready' : 'Setup'}
         label="mo CLI"
-        sublabel={status.moVersion}
+        sublabel={statusStore.status.moVersion}
       />
     </div>
   {/if}

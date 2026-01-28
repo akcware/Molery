@@ -2,23 +2,11 @@
   import { onMount } from 'svelte';
   import Card from '$lib/components/ui/Card.svelte';
   import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
-  import { getStatus, checkMoInstalled } from '$lib/services/statusService';
   import { formatBytes, formatPercentage } from '$lib/utils/format';
-  import type { SystemStatus } from '$lib/types/status.types';
+  import { statusStore } from '$lib/stores/status.store.svelte';
 
-  let status = $state<SystemStatus | null>(null);
-  let moInstalled = $state(false);
-  let loading = $state(true);
-
-  onMount(async () => {
-    try {
-      [status, moInstalled] = await Promise.all([
-        getStatus(),
-        checkMoInstalled()
-      ]);
-    } finally {
-      loading = false;
-    }
+  onMount(() => {
+    statusStore.loadStatus();
   });
 </script>
 
@@ -28,19 +16,19 @@
     <p class="text-content-secondary">Overview of your system health</p>
   </div>
 
-  {#if loading}
+  {#if statusStore.loading}
     <div class="text-content-secondary">Loading...</div>
-  {:else if status}
+  {:else if statusStore.status}
     <Card>
       <h3 class="font-medium text-content-primary mb-3">Disk Space</h3>
       <div class="space-y-2">
-        <ProgressBar value={status.diskUsed} max={status.diskTotal} />
+        <ProgressBar value={statusStore.status.diskUsed} max={statusStore.status.diskTotal} />
         <div class="flex justify-between text-sm">
           <span class="text-content-secondary">
-            {formatBytes(status.diskUsed)} / {formatBytes(status.diskTotal)}
+            {formatBytes(statusStore.status.diskUsed)} / {formatBytes(statusStore.status.diskTotal)}
           </span>
           <span class="text-content-secondary">
-            {formatPercentage(status.diskUsed, status.diskTotal)} used
+            {formatPercentage(statusStore.status.diskUsed, statusStore.status.diskTotal)} used
           </span>
         </div>
       </div>
@@ -49,25 +37,25 @@
     <Card>
       <h3 class="font-medium text-content-primary mb-3">mo CLI Status</h3>
       <div class="flex items-center gap-2">
-        <span class="{moInstalled ? 'text-accent-green' : 'text-accent-red'}">
-          {moInstalled ? '✓' : '✕'}
+        <span class="{statusStore.moInstalled ? 'text-accent-green' : 'text-accent-red'}">
+          {statusStore.moInstalled ? '✓' : '✕'}
         </span>
         <span class="text-content-primary">
-          {moInstalled ? 'Installed' : 'Not Installed'}
+          {statusStore.moInstalled ? 'Installed' : 'Not Installed'}
         </span>
-        {#if moInstalled}
+        {#if statusStore.moInstalled}
           <span class="text-content-secondary text-sm">
-            Version {status.moVersion}
+            Version {statusStore.status.moVersion}
           </span>
         {/if}
       </div>
     </Card>
 
-    {#if status.cleanableSize > 0}
+    {#if statusStore.status.cleanableSize > 0}
       <Card>
         <h3 class="font-medium text-content-primary mb-3">Recommendations</h3>
         <ul class="text-sm text-content-secondary space-y-1 list-disc list-inside">
-          <li>Clean {formatBytes(status.cleanableSize)} of temporary files</li>
+          <li>Clean {formatBytes(statusStore.status.cleanableSize)} of temporary files</li>
         </ul>
       </Card>
     {/if}
