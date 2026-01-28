@@ -10,6 +10,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             status::check_mo_installed,
             status::get_status,
+            status::get_extended_status,
             status::get_home_dir,
             clean::scan_cleanup,
             clean::run_cleanup,

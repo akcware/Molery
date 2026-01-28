@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import StatCard from '$lib/components/ui/StatCard.svelte';
   import Button from '$lib/components/ui/Button.svelte';
-  import { formatBytes, formatPercentage } from '$lib/utils/format';
+  import { formatBytes, formatPercentage, formatCpuUsage, formatCores } from '$lib/utils/format';
   import { uiStore } from '$lib/stores/ui.store.svelte';
   import { statusStore } from '$lib/stores/status.store.svelte';
 
@@ -26,11 +26,20 @@
         </div>
       {/each}
     </div>
+    <div class="grid grid-cols-3 gap-4">
+      {#each [1, 2, 3] as _}
+        <div class="bg-surface-secondary rounded-xl p-4 animate-pulse">
+          <div class="h-8 bg-surface-tertiary rounded mb-2"></div>
+          <div class="h-4 bg-surface-tertiary rounded w-2/3"></div>
+        </div>
+      {/each}
+    </div>
   {:else if statusStore.error}
     <div class="bg-accent-red/10 border border-accent-red rounded-lg p-4 text-accent-red">
       {statusStore.error}
     </div>
   {:else if statusStore.status}
+    <!-- Row 1: Disk metrics -->
     <div class="grid grid-cols-4 gap-4">
       <StatCard
         icon="📦"
@@ -54,6 +63,28 @@
         value={statusStore.status.moVersion !== 'Not installed' ? 'Ready' : 'Setup'}
         label="mo CLI"
         sublabel={statusStore.status.moVersion}
+      />
+    </div>
+
+    <!-- Row 2: System info -->
+    <div class="grid grid-cols-3 gap-4">
+      <StatCard
+        icon="🖥️"
+        value={`macOS ${statusStore.macos?.version ?? '—'}`}
+        label="Operating System"
+        sublabel={statusStore.macos?.modelName}
+      />
+      <StatCard
+        icon="🧠"
+        value={formatBytes(statusStore.memory?.used ?? 0)}
+        label="RAM Used"
+        sublabel={`${formatBytes(statusStore.memory?.available ?? 0)} available`}
+      />
+      <StatCard
+        icon="⚡"
+        value={formatCpuUsage(statusStore.cpu?.usagePercent ?? 0)}
+        label="CPU Usage"
+        sublabel={statusStore.cpu?.model?.split(' ').slice(0, 3).join(' ')}
       />
     </div>
   {/if}

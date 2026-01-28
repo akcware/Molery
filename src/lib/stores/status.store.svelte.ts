@@ -1,10 +1,10 @@
-import { getStatus, checkMoInstalled } from '$lib/services/statusService';
-import type { SystemStatus } from '$lib/types/status.types';
+import { getExtendedStatus, checkMoInstalled } from '$lib/services/statusService';
+import type { ExtendedSystemStatus } from '$lib/types/status.types';
 
 const STORAGE_KEY = 'molery:status';
 
 interface StatusCache {
-  status: SystemStatus | null;
+  status: ExtendedSystemStatus | null;
   moInstalled: boolean;
 }
 
@@ -32,7 +32,7 @@ function saveToStorage(data: StatusCache) {
 
 // Initialize from localStorage
 const cached = loadFromStorage();
-let status = $state<SystemStatus | null>(cached.status);
+let status = $state<ExtendedSystemStatus | null>(cached.status);
 let moInstalled = $state(cached.moInstalled);
 let loading = $state(false);
 let error = $state<string | null>(null);
@@ -54,6 +54,16 @@ export const statusStore = {
     return status !== null;
   },
 
+  get macos() {
+    return status?.macos ?? null;
+  },
+  get memory() {
+    return status?.memory ?? null;
+  },
+  get cpu() {
+    return status?.cpu ?? null;
+  },
+
   async loadStatus() {
     if (status !== null) {
       // Has cache: show immediately, refresh silently in background
@@ -65,7 +75,7 @@ export const statusStore = {
     error = null;
     try {
       const [newStatus, newMoInstalled] = await Promise.all([
-        getStatus(),
+        getExtendedStatus(),
         checkMoInstalled()
       ]);
       status = newStatus;
@@ -81,7 +91,7 @@ export const statusStore = {
   async refreshInBackground() {
     try {
       const [newStatus, newMoInstalled] = await Promise.all([
-        getStatus(),
+        getExtendedStatus(),
         checkMoInstalled()
       ]);
       status = newStatus;
