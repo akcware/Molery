@@ -9,6 +9,8 @@
   import { toastStore } from '$lib/stores/toast.store.svelte';
   import { formatBytes } from '$lib/utils/format';
   import type { AnalyzeResult, DiskItem } from '$lib/types/analyze.types';
+  import Folder from 'lucide-svelte/icons/folder';
+  import FileText from 'lucide-svelte/icons/file-text';
 
   let path = $state('');
   let result = $state<AnalyzeResult | null>(null);
@@ -49,8 +51,8 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-semibold text-content-primary">Disk Analyzer</h1>
-    <p class="text-content-secondary">Visualize disk usage by folder</p>
+    <h1 class="text-xl font-semibold text-content-primary">Disk Analyzer</h1>
+    <p class="text-[13px] text-content-secondary">Visualize disk usage by folder</p>
   </div>
 
   <div class="flex gap-2">
@@ -91,10 +93,14 @@
         <div class="divide-y divide-border-secondary">
           {#each result.items.slice(0, 10) as item}
             <button
-              class="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-tertiary text-left"
+              class="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-tertiary text-left transition-colors"
               onclick={() => drillDown(item)}
             >
-              <span>{item.isDirectory ? '📁' : '📄'}</span>
+              {#if item.isDirectory}
+                <Folder size={16} strokeWidth={1.75} class="text-content-tertiary flex-shrink-0" />
+              {:else}
+                <FileText size={16} strokeWidth={1.75} class="text-content-tertiary flex-shrink-0" />
+              {/if}
               <div class="flex-1 min-w-0">
                 <p class="text-content-primary truncate">{item.name}</p>
                 <ProgressBar value={item.size} max={result.totalSize} />

@@ -12,8 +12,8 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-semibold text-content-primary">System Status</h1>
-    <p class="text-content-secondary">Overview of your system health</p>
+    <h1 class="text-xl font-semibold text-content-primary">System Status</h1>
+    <p class="text-[13px] text-content-secondary">Overview of your system health</p>
   </div>
 
   {#if statusStore.loading}
@@ -112,10 +112,7 @@
     <Card>
       <h3 class="font-medium text-content-primary mb-3">mo CLI Status</h3>
       <div class="flex items-center gap-2">
-        <span class="{statusStore.moInstalled ? 'text-accent-green' : 'text-accent-red'}">
-          {statusStore.moInstalled ? '✓' : '✕'}
-        </span>
-        <span class="text-content-primary">
+        <span class="text-sm {statusStore.moInstalled ? 'text-accent-green' : 'text-accent-red'}">
           {statusStore.moInstalled ? 'Installed' : 'Not Installed'}
         </span>
         {#if statusStore.moInstalled}

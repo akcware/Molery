@@ -60,8 +60,8 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-semibold text-content-primary">System Optimize</h1>
-    <p class="text-content-secondary">Optimize system performance</p>
+    <h1 class="text-xl font-semibold text-content-primary">System Optimize</h1>
+    <p class="text-[13px] text-content-secondary">Optimize system performance</p>
   </div>
 
   <Card>

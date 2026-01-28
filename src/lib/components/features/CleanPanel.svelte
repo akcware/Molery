@@ -86,8 +86,8 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-semibold text-content-primary">System Cleanup</h1>
-    <p class="text-content-secondary">Scan and remove unnecessary files</p>
+    <h1 class="text-xl font-semibold text-content-primary">System Cleanup</h1>
+    <p class="text-[13px] text-content-secondary">Scan and remove unnecessary files</p>
   </div>
 
   {#if cleanStore.isScanning}

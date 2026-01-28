@@ -10,13 +10,13 @@
   let { children }: Props = $props();
 </script>
 
-<div class="h-screen flex flex-col bg-surface-primary">
+<div class="h-screen flex flex-col bg-transparent">
   <Header />
 
   <div class="flex-1 flex overflow-hidden">
     <Sidebar />
 
-    <main class="flex-1 overflow-auto p-6">
+    <main class="flex-1 overflow-auto p-6 bg-surface-primary">
       {#if children}
         {@render children()}
       {/if}

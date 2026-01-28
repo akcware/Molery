@@ -8,6 +8,8 @@
   import { toastStore } from '$lib/stores/toast.store.svelte';
   import { formatBytes } from '$lib/utils/format';
   import type { AppInfo } from '$lib/types/uninstall.types';
+  import Package from 'lucide-svelte/icons/package';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
 
   let searchQuery = $state('');
   let selectedApp = $state<AppInfo | null>(null);
@@ -48,8 +50,8 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-semibold text-content-primary">App Uninstaller</h1>
-    <p class="text-content-secondary">Completely remove applications and their files</p>
+    <h1 class="text-xl font-semibold text-content-primary">App Uninstaller</h1>
+    <p class="text-[13px] text-content-secondary">Completely remove applications and their files</p>
   </div>
 
   <input
@@ -67,15 +69,17 @@
     <Card padding="none">
       <div class="max-h-96 overflow-auto divide-y divide-border-secondary">
         {#each filteredApps as app}
-          <div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-tertiary">
-            <span class="text-2xl">📦</span>
-            <div class="flex-1 min-w-0">
-              <p class="font-medium text-content-primary truncate">{app.name}</p>
-              <p class="text-xs text-content-tertiary truncate">{app.path}</p>
+          <div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-tertiary transition-colors">
+            <div class="w-8 h-8 rounded-lg bg-surface-tertiary/50 flex items-center justify-center flex-shrink-0">
+              <Package size={16} strokeWidth={1.75} class="text-content-secondary" />
             </div>
-            <span class="text-sm text-content-secondary">{formatBytes(app.size)}</span>
+            <div class="flex-1 min-w-0">
+              <p class="text-[13px] font-medium text-content-primary truncate">{app.name}</p>
+              <p class="text-[11px] text-content-tertiary truncate">{app.path}</p>
+            </div>
+            <span class="text-[12px] text-content-secondary">{formatBytes(app.size)}</span>
             <Button variant="ghost" size="sm" onclick={() => selectedApp = app}>
-              🗑️
+              <Trash2 size={14} strokeWidth={1.75} />
             </Button>
           </div>
         {/each}

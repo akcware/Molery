@@ -6,6 +6,7 @@
   --color-surface-secondary: var(--color-surface-secondary);
   --color-surface-tertiary: var(--color-surface-tertiary);
   --color-surface-elevated: var(--color-surface-elevated);
+  --color-surface-vibrancy: var(--color-surface-vibrancy);
 
   --color-content-primary: var(--color-content-primary);
   --color-content-secondary: var(--color-content-secondary);
@@ -19,6 +20,11 @@
 
   --color-border-primary: var(--color-border-primary);
   --color-border-secondary: var(--color-border-secondary);
+
+  /* Shadows */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
 }
 
 :root {
@@ -26,15 +32,19 @@
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
   --font-mono: 'SF Mono', SFMono-Regular, Menlo, monospace;
 
-  /* Light mode colors */
-  --color-accent-blue: #0066FF;
-  --color-accent-green: #22C55E;
-  --color-accent-orange: #F97316;
-  --color-accent-red: #EF4444;
+  /* Vibrancy system */
+  --color-surface-vibrancy: rgba(255, 255, 255, 0.72);
+  --blur-amount: 20px;
+
+  /* Light mode colors - Apple system colors */
+  --color-accent-blue: #007AFF;
+  --color-accent-green: #34C759;
+  --color-accent-orange: #FF9500;
+  --color-accent-red: #FF3B30;
 
   --color-surface-primary: #FFFFFF;
   --color-surface-secondary: #F5F5F7;
-  --color-surface-tertiary: #E5E5EA;
+  --color-surface-tertiary: #E8E8ED;
   --color-surface-elevated: #FFFFFF;
 
   --color-content-primary: #1D1D1F;
@@ -42,24 +52,44 @@
   --color-content-tertiary: #8E8E93;
   --color-content-inverse: #FFFFFF;
 
-  --color-border-primary: #D1D1D6;
-  --color-border-secondary: #E5E5EA;
+  /* Semi-transparent borders */
+  --color-border-primary: rgba(0, 0, 0, 0.08);
+  --color-border-secondary: rgba(0, 0, 0, 0.05);
+
+  /* Softer shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
 }
 
 .dark {
-  --color-accent-blue: #3B82F6;
+  /* Dark mode vibrancy */
+  --color-surface-vibrancy: rgba(30, 30, 30, 0.72);
 
-  --color-surface-primary: #1A1A1A;
-  --color-surface-secondary: #2D2D2D;
-  --color-surface-tertiary: #3D3D3D;
-  --color-surface-elevated: #2D2D2D;
+  /* Apple system colors - dark mode */
+  --color-accent-blue: #0A84FF;
+  --color-accent-green: #30D158;
+  --color-accent-orange: #FF9F0A;
+  --color-accent-red: #FF453A;
+
+  --color-surface-primary: #1C1C1E;
+  --color-surface-secondary: #2C2C2E;
+  --color-surface-tertiary: #3A3A3C;
+  --color-surface-elevated: #2C2C2E;
 
   --color-content-primary: #F5F5F7;
-  --color-content-secondary: #A1A1A6;
+  --color-content-secondary: #98989D;
+  --color-content-tertiary: #636366;
   --color-content-inverse: #1D1D1F;
 
-  --color-border-primary: #3D3D3D;
-  --color-border-secondary: #2D2D2D;
+  /* Semi-transparent borders - dark mode */
+  --color-border-primary: rgba(255, 255, 255, 0.1);
+  --color-border-secondary: rgba(255, 255, 255, 0.06);
+
+  /* Softer shadows - dark mode */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Native desktop feel - disable text selection by default */
@@ -163,4 +193,16 @@ pre {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-content-tertiary);
+}
+
+/* Vibrancy utility class for macOS transparency effect */
+.vibrancy {
+  background: var(--color-surface-vibrancy);
+  backdrop-filter: blur(var(--blur-amount)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-amount)) saturate(180%);
+}
+
+/* Transparent background for vibrancy containers */
+.bg-transparent-root {
+  background: transparent;
 }

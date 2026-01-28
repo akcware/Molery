@@ -86,30 +86,49 @@ fn parse_scan_output(output: &str) -> Result<ScanResult, String> {
         homebrew: 0,
     };
 
-    for line in output.lines() {
-        if let Some((category, size, path)) = parse_line(line) {
-            let item = CleanupItem {
-                path: path.clone(),
-                size,
-                category: category.clone(),
-                description: format!("{} file", category),
-            };
+    // Strip ANSI color codes for easier parsing
+    let clean_output = strip_ansi_codes(output);
+    let mut current_section = String::new();
 
-            match category.as_str() {
-                "cache" => categories.cache += size,
-                "logs" => categories.logs += size,
-                "trash" => categories.trash += size,
-                "downloads" => categories.downloads += size,
-                "xcode" => categories.xcode += size,
-                "homebrew" => categories.homebrew += size,
-                _ => {}
+    for line in clean_output.lines() {
+        let trimmed = line.trim();
+
+        // Detect section headers (e.g., "➤ User essentials" or "➤ Developer tools")
+        if trimmed.starts_with('➤') || trimmed.starts_with("➤") {
+            current_section = trimmed
+                .trim_start_matches('➤')
+                .trim_start_matches("➤")
+                .trim()
+                .to_lowercase();
+            continue;
+        }
+
+        // Parse items with sizes (e.g., "→ User app cache 110 items (249.6MB dry)")
+        if trimmed.starts_with('→') || trimmed.starts_with("→") {
+            if let Some(item) = parse_item_line(trimmed, &current_section) {
+                // Categorize based on section and description
+                let category = categorize_item(&current_section, &item.description);
+                match category.as_str() {
+                    "cache" => categories.cache += item.size,
+                    "logs" => categories.logs += item.size,
+                    "trash" => categories.trash += item.size,
+                    "downloads" => categories.downloads += item.size,
+                    "xcode" => categories.xcode += item.size,
+                    "homebrew" => categories.homebrew += item.size,
+                    _ => categories.cache += item.size, // Default to cache
+                }
+                items.push(item);
             }
-
-            items.push(item);
         }
     }
 
-    let total_size = items.iter().map(|i| i.size).sum();
+    // Also try to extract total from summary line
+    // Format: "Potential space: 0.39GB | Items: 40 | Categories: 14"
+    let total_size = if let Some(summary_total) = extract_summary_total(&clean_output) {
+        summary_total
+    } else {
+        items.iter().map(|i| i.size).sum()
+    };
 
     Ok(ScanResult {
         items,
@@ -174,22 +193,104 @@ fn extract_items_count(line: &str) -> Option<u32> {
     None
 }
 
-fn parse_line(line: &str) -> Option<(String, u64, String)> {
-    // Parse a single line of mo output
-    // Format depends on mo CLI output - adjust accordingly
-    // Example: "cache  1.2GB  /path/to/cache"
+/// Strip ANSI color/escape codes from a string
+fn strip_ansi_codes(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
 
-    let parts: Vec<&str> = line.split_whitespace().collect();
-    if parts.len() >= 3 {
-        let category = parts[0].to_lowercase();
-        // Only process valid categories
-        if matches!(
-            category.as_str(),
-            "cache" | "logs" | "trash" | "downloads" | "xcode" | "homebrew"
-        ) {
-            let size = parse_size(parts[1]).unwrap_or(0);
-            let path = parts[2..].join(" ");
-            return Some((category, size, path));
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            // Skip escape sequence
+            if chars.peek() == Some(&'[') {
+                chars.next(); // consume '['
+                // Skip until we hit a letter (end of escape sequence)
+                while let Some(&next) = chars.peek() {
+                    chars.next();
+                    if next.is_ascii_alphabetic() {
+                        break;
+                    }
+                }
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
+/// Parse a line like "→ User app cache 110 items (249.6MB dry)" or "→ Homebrew cache 2 items (51.1MB dry)"
+fn parse_item_line(line: &str, section: &str) -> Option<CleanupItem> {
+    let trimmed = line
+        .trim()
+        .trim_start_matches('→')
+        .trim_start_matches("→")
+        .trim();
+
+    // Extract size from parentheses (e.g., "(249.6MB dry)" or "(51.1MB dry)")
+    let size = if let Some(start) = trimmed.rfind('(') {
+        if let Some(end) = trimmed.rfind(')') {
+            let size_part = &trimmed[start + 1..end];
+            // Remove "dry" suffix and parse
+            let size_str = size_part.replace(" dry", "").replace("dry", "");
+            parse_size(size_str.trim()).unwrap_or(0)
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+
+    // Skip items with no size (they typically say "would clean" without a size)
+    if size == 0 {
+        return None;
+    }
+
+    // Extract description (everything before the size parentheses)
+    let description = if let Some(start) = trimmed.rfind('(') {
+        trimmed[..start].trim().to_string()
+    } else {
+        trimmed.to_string()
+    };
+
+    Some(CleanupItem {
+        path: String::new(), // mo doesn't provide paths in this format
+        size,
+        category: categorize_item(section, &description),
+        description,
+    })
+}
+
+/// Categorize an item based on section name and description
+fn categorize_item(section: &str, description: &str) -> String {
+    let section_lower = section.to_lowercase();
+    let desc_lower = description.to_lowercase();
+
+    if desc_lower.contains("log") {
+        "logs".to_string()
+    } else if desc_lower.contains("homebrew") || section_lower.contains("homebrew") {
+        "homebrew".to_string()
+    } else if desc_lower.contains("xcode") || section_lower.contains("xcode") {
+        "xcode".to_string()
+    } else if desc_lower.contains("download") {
+        "downloads".to_string()
+    } else if desc_lower.contains("trash") {
+        "trash".to_string()
+    } else {
+        "cache".to_string()
+    }
+}
+
+/// Extract total size from summary line like "Potential space: 0.39GB | Items: 40 | Categories: 14"
+fn extract_summary_total(output: &str) -> Option<u64> {
+    for line in output.lines() {
+        if line.contains("Potential space:") {
+            // Find the size after "Potential space:"
+            if let Some(start) = line.find("Potential space:") {
+                let after = &line[start + "Potential space:".len()..];
+                // Get the first word which should be the size
+                let size_str = after.trim().split('|').next()?.trim();
+                return parse_size(size_str);
+            }
         }
     }
     None
