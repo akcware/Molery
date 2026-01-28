@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@theme {
+  /* Custom colors for Tailwind utilities */
+  --color-surface-primary: var(--color-surface-primary);
+  --color-surface-secondary: var(--color-surface-secondary);
+  --color-surface-tertiary: var(--color-surface-tertiary);
+  --color-surface-elevated: var(--color-surface-elevated);
+
+  --color-content-primary: var(--color-content-primary);
+  --color-content-secondary: var(--color-content-secondary);
+  --color-content-tertiary: var(--color-content-tertiary);
+  --color-content-inverse: var(--color-content-inverse);
+
+  --color-accent-blue: var(--color-accent-blue);
+  --color-accent-green: var(--color-accent-green);
+  --color-accent-orange: var(--color-accent-orange);
+  --color-accent-red: var(--color-accent-red);
+
+  --color-border-primary: var(--color-border-primary);
+  --color-border-secondary: var(--color-border-secondary);
+}
+
+:root {
+  /* Fonts */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  --font-mono: 'SF Mono', SFMono-Regular, Menlo, monospace;
+
+  /* Light mode colors */
+  --color-accent-blue: #0066FF;
+  --color-accent-green: #22C55E;
+  --color-accent-orange: #F97316;
+  --color-accent-red: #EF4444;
+
+  --color-surface-primary: #FFFFFF;
+  --color-surface-secondary: #F5F5F7;
+  --color-surface-tertiary: #E5E5EA;
+  --color-surface-elevated: #FFFFFF;
+
+  --color-content-primary: #1D1D1F;
+  --color-content-secondary: #6E6E73;
+  --color-content-tertiary: #8E8E93;
+  --color-content-inverse: #FFFFFF;
+
+  --color-border-primary: #D1D1D6;
+  --color-border-secondary: #E5E5EA;
+}
+
+.dark {
+  --color-accent-blue: #3B82F6;
+
+  --color-surface-primary: #1A1A1A;
+  --color-surface-secondary: #2D2D2D;
+  --color-surface-tertiary: #3D3D3D;
+  --color-surface-elevated: #2D2D2D;
+
+  --color-content-primary: #F5F5F7;
+  --color-content-secondary: #A1A1A6;
+  --color-content-inverse: #1D1D1F;
+
+  --color-border-primary: #3D3D3D;
+  --color-border-secondary: #2D2D2D;
+}
+
+/* Native desktop feel - disable text selection by default */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+/* Allow selection for content that users may need to copy */
+.select-text,
+input,
+textarea,
+code,
+pre {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+}
+
+/* Animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.2s ease-out;
+}
+
+/* Toast animation */
+.toast-enter {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+/* Panel transitions */
+.panel-content {
+  animation: slide-in-up 0.2s ease-out;
+}
+
+/* Hover transitions */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--color-accent-blue);
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-content-tertiary);
+}
