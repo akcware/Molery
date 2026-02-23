@@ -39,7 +39,9 @@ pub struct CleanupResult {
 
 #[tauri::command]
 pub async fn scan_cleanup() -> Result<ScanResult, String> {
-    let output = Command::new("mo")
+    let mo = super::find_mo_binary().ok_or("mo CLI not found")?;
+
+    let output = Command::new(mo)
         .args(["clean", "--dry-run"])
         .output()
         .map_err(|e| format!("Failed to execute mo: {}", e))?;
@@ -61,7 +63,9 @@ pub async fn run_cleanup(categories: Vec<String>) -> Result<CleanupResult, Strin
         args.push(format!("--{}", cat));
     }
 
-    let output = Command::new("mo")
+    let mo = super::find_mo_binary().ok_or("mo CLI not found")?;
+
+    let output = Command::new(mo)
         .args(&args)
         .output()
         .map_err(|e| format!("Failed to execute mo: {}", e))?;
@@ -218,7 +222,7 @@ fn strip_ansi_codes(s: &str) -> String {
     result
 }
 
-/// Parse a line like "→ User app cache 110 items (249.6MB dry)" or "→ Homebrew cache 2 items (51.1MB dry)"
+/// Parse a line like "→ User app cache 150 items, 4.50GB dry" or "→ Bun cache 3344 items, 1.69GB dry"
 fn parse_item_line(line: &str, section: &str) -> Option<CleanupItem> {
     let trimmed = line
         .trim()
@@ -226,31 +230,43 @@ fn parse_item_line(line: &str, section: &str) -> Option<CleanupItem> {
         .trim_start_matches("→")
         .trim();
 
-    // Extract size from parentheses (e.g., "(249.6MB dry)" or "(51.1MB dry)")
-    let size = if let Some(start) = trimmed.rfind('(') {
-        if let Some(end) = trimmed.rfind(')') {
-            let size_part = &trimmed[start + 1..end];
-            // Remove "dry" suffix and parse
-            let size_str = size_part.replace(" dry", "").replace("dry", "");
-            parse_size(size_str.trim()).unwrap_or(0)
-        } else {
-            0
+    // Try to extract size from comma-separated format: "description, SIZEdry" or "description, SIZE dry"
+    // Also try parenthesized format as fallback: "description (SIZE dry)"
+    let mut size = 0u64;
+    let mut description = trimmed.to_string();
+
+    // First try: comma-separated format (e.g., "User app cache 150 items, 4.50GB dry")
+    if let Some(last_comma) = trimmed.rfind(',') {
+        let after_comma = trimmed[last_comma + 1..].trim();
+        let size_candidate = after_comma
+            .replace(" dry", "")
+            .replace("dry", "")
+            .trim()
+            .to_string();
+        if let Some(parsed) = parse_size(&size_candidate) {
+            size = parsed;
+            description = trimmed[..last_comma].trim().to_string();
         }
-    } else {
-        0
-    };
+    }
+
+    // Fallback: parenthesized format (e.g., "description (249.6MB dry)")
+    if size == 0 {
+        if let Some(start) = trimmed.rfind('(') {
+            if let Some(end) = trimmed.rfind(')') {
+                let size_part = &trimmed[start + 1..end];
+                let size_str = size_part.replace(" dry", "").replace("dry", "");
+                if let Some(parsed) = parse_size(size_str.trim()) {
+                    size = parsed;
+                    description = trimmed[..start].trim().to_string();
+                }
+            }
+        }
+    }
 
     // Skip items with no size (they typically say "would clean" without a size)
     if size == 0 {
         return None;
     }
-
-    // Extract description (everything before the size parentheses)
-    let description = if let Some(start) = trimmed.rfind('(') {
-        trimmed[..start].trim().to_string()
-    } else {
-        trimmed.to_string()
-    };
 
     Some(CleanupItem {
         path: String::new(), // mo doesn't provide paths in this format

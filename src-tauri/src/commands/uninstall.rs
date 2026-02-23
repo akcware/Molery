@@ -54,7 +54,9 @@ pub async fn list_apps() -> Result<Vec<AppInfo>, String> {
 
 #[tauri::command]
 pub async fn uninstall_app(app_name: String) -> Result<UninstallResult, String> {
-    let output = Command::new("mo")
+    let mo = super::find_mo_binary().ok_or("mo CLI not found")?;
+
+    let output = Command::new(mo)
         .args(["uninstall", &app_name])
         .output()
         .map_err(|e| format!("Failed to execute mo: {}", e))?;

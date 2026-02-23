@@ -62,12 +62,7 @@ pub struct ExtendedSystemStatus {
 
 #[tauri::command]
 pub async fn check_mo_installed() -> Result<bool, String> {
-    let output = Command::new("which")
-        .arg("mo")
-        .output()
-        .map_err(|e| format!("Failed to check mo: {}", e))?;
-
-    Ok(output.status.success())
+    Ok(super::find_mo_binary().is_some())
 }
 
 #[tauri::command]
@@ -125,7 +120,9 @@ fn parse_df_output(output: &str) -> Result<(u64, u64, u64), String> {
 }
 
 fn get_mo_version() -> Result<String, String> {
-    let output = Command::new("mo")
+    let mo = super::find_mo_binary().ok_or("mo not found")?;
+
+    let output = Command::new(mo)
         .arg("--version")
         .output()
         .map_err(|e| format!("Failed to get mo version: {}", e))?;
