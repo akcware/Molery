@@ -41,6 +41,12 @@ bun run tauri dev
 bun run tauri build
 ```
 
+### macOS Gatekeeper Note
+If macOS displays `"molery is damaged and can't be opened"` upon launching the installed `.dmg`, clear the quarantine flag via Terminal:
+
+```bash
+sudo xattr -cr /Applications/molery.app
+
 ### Project Structure
 
 ```
