@@ -25,13 +25,18 @@ Molery is a macOS desktop GUI for the [Mole CLI](https://github.com/tw93/Mole) (
 bun run tauri dev      # Run full app (Vite + Tauri)
 bun run dev            # Vite dev server only (frontend)
 bun run check          # TypeScript type checking
+cd src-tauri && cargo test              # Rust unit tests (output parsers)
+cd src-tauri && cargo test -- --ignored # Live tests against the installed mo CLI (slow)
 bun run check:watch    # Type checking in watch mode
 
 # Production
 bun run tauri build    # Build distributable app
 ```
 
-**Prerequisites:** Node.js 18+, Rust toolchain, `mo` CLI (`brew install mole`)
+**Prerequisites:** Node.js 18+, Rust toolchain, `mo` CLI **1.55+** (`brew install mole`)
+
+> The Rust layer parses `mo`'s human-readable output. Its format changed in 1.55
+> (see `docs/specs/rust-commands.md`), so older `mo` builds under-report cleanup items.
 
 ## Architecture
 
@@ -131,3 +136,4 @@ All 6 development phases are complete. See `tasks/phase-*.md` files for implemen
 | `mo uninstall <app>` | Fully uninstall application |
 | `mo analyze <path>` | Analyze disk usage |
 | `mo optimize` | System optimization |
+| `mo history` | Review cleanup activity (`--json` supported) |

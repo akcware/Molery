@@ -34,8 +34,8 @@
         {/if}
       </div>
       <div class="flex-1 min-w-0">
-        <div class="flex items-baseline gap-2">
-          <span class="text-xl font-semibold text-content-primary">{value}</span>
+        <div class="flex items-baseline gap-2 min-w-0">
+          <span class="text-xl font-semibold text-content-primary break-words" title={value}>{value}</span>
           {#if trend}
             <span class="text-xs {trend === 'up' ? 'text-accent-red' : 'text-accent-green'}">
               {trend === 'up' ? '↑' : '↓'}

@@ -85,22 +85,56 @@ async fn scan_cleanup() -> Result<ScanResult, String> {
 }
 ```
 
+**Parsed output format (mo 1.55):**
+
+`mo` has no `--json` for `clean`, so `parse_scan_output` reads the human-readable
+report. Sections start with `➤`, items with `→`. Item lines take three shapes:
+
+```
+→ User app cache · 68 items, 13.83GB dry        # description · count, size
+→ Chrome on-device model cache · 4.27GB dry     # description · size (no count)
+→ Chrome Service Worker, would clean 379.9MB, 0 protected
+```
+
+`parse_item_line` splits the description on ` · ` (falling back to the first comma
+for pre-1.55 output), then scans the remainder right-to-left for the first
+size-like token. Lines with no reclaimable size (`→ npm cache · would clean`,
+`→ ... · 0B dry`) are skipped.
+
+The grand total comes from the summary line, not the sum of items:
+
+```
+Potential space: 62.41GB | Items: 3803 | Categories: 7
+```
+
+> **Format changes to watch.** 1.55 introduced the ` · ` separator; parsing 1.55
+> output with the pre-1.55 parser silently dropped ~37% of items. Since 1.54 `mo`
+> also omits ANSI colour codes when stdout is not a TTY and sends errors to stderr.
+> `strip_ansi_codes` is retained for compatibility with older builds.
+> Unit tests in `clean.rs` cover all shapes above for both 1.36 and 1.55.
+
 ---
 
 ### run_cleanup
 
-Executes cleanup for specified categories.
+Runs a full cleanup via `mo clean`.
 
 ```rust
 #[tauri::command]
-async fn run_cleanup(categories: Vec<String>) -> Result<CleanupResult, String>
+async fn run_cleanup() -> Result<CleanupResult, String>
 ```
 
-**Parameters:**
+**Parameters:** none.
 
-| Name | Type | Description |
-|------|------|-------------|
-| `categories` | `Vec<String>` | Categories to clean: `["cache", "logs", "trash"]` |
+> **No per-category cleanup.** `mo clean` cleans everything it finds and has no
+> category flags. It previously took a `categories: Vec<String>` argument and
+> passed `--cache`, `--logs`, etc.; mo 1.55 rejects those with
+> `Unknown option for mo clean: --cache` (exit 1), while mo 1.36 accepted the flag
+> and ran unfiltered. The category breakdown from `scan_cleanup`
+> is a preview of what will be removed, not a filter, and the UI says so.
+
+`mo clean` is non-interactive when stdout is not a TTY, so it does not block on a
+confirmation prompt. Molery gates it behind its own confirm dialog instead.
 
 **Returns:**
 
@@ -163,6 +197,13 @@ struct AppInfo {
 ### uninstall_app
 
 Fully uninstalls an application and its associated files.
+
+> **mo asks for confirmation on stdin.** `mo uninstall` prompts twice
+> (`Proceed with uninstallation? [y/N]`, then `Enter confirm, ESC cancel`) and has
+> no `--yes` flag. With stdin closed — the default for `Command::output()` — mo
+> aborts with exit 1 and an **empty stderr**, so the command must spawn with
+> `Stdio::piped()` and write `"y\n\n"`. Verified live with `--dry-run`
+> (`cargo test -- --ignored`).
 
 ```rust
 #[tauri::command]

@@ -26,7 +26,7 @@ macOS desktop GUI for the [Mole CLI](https://github.com/tw93/Mole) (`mo`) - a sy
 
 - Node.js 18+
 - Rust toolchain
-- `mo` CLI installed (`brew install tw93/brew/mole`)
+- `mo` CLI 1.55+ installed (`brew install mole`)
 
 ### Setup
 

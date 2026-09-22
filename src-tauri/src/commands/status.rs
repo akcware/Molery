@@ -131,9 +131,21 @@ fn get_mo_version() -> Result<String, String> {
         return Err("mo command failed".to_string());
     }
 
-    let version = String::from_utf8_lossy(&output.stdout)
-        .trim()
-        .to_string();
+    // `mo --version` prints a multi-line report (version, macOS, kernel, SIP, ...).
+    // The UI renders this inline, so keep just the version number.
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let version = stdout
+        .lines()
+        .find_map(|line| {
+            line.trim()
+                .strip_prefix("Mole version ")
+                .map(|v| v.trim().to_string())
+        })
+        .unwrap_or_else(|| stdout.trim().lines().next().unwrap_or("").trim().to_string());
+
+    if version.is_empty() {
+        return Err("could not parse mo version".to_string());
+    }
 
     Ok(version)
 }

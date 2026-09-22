@@ -55,24 +55,30 @@ pub async fn scan_cleanup() -> Result<ScanResult, String> {
     parse_scan_output(&stdout)
 }
 
+/// Run a full cleanup.
+///
+/// `mo clean` has no per-category flags — it cleans everything it finds, and
+/// rejects unknown options outright (mo 1.55 exits 1 on `--cache`). The category
+/// breakdown reported by `scan_cleanup` is therefore a preview of what will be
+/// removed, not a filter. The UI states this explicitly.
 #[tauri::command]
-pub async fn run_cleanup(categories: Vec<String>) -> Result<CleanupResult, String> {
-    let mut args = vec!["clean".to_string()];
-
-    for cat in &categories {
-        args.push(format!("--{}", cat));
-    }
-
+pub async fn run_cleanup() -> Result<CleanupResult, String> {
     let mo = super::find_mo_binary().ok_or("mo CLI not found")?;
 
     let output = Command::new(mo)
-        .args(&args)
+        .arg("clean")
         .output()
         .map_err(|e| format!("Failed to execute mo: {}", e))?;
 
+    // Since mo 1.54 errors go to stderr; fall back to stdout when it is empty.
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("mo clean failed: {}", stderr));
+        let detail = if stderr.trim().is_empty() {
+            String::from_utf8_lossy(&output.stdout).trim().to_string()
+        } else {
+            stderr.trim().to_string()
+        };
+        return Err(format!("mo clean failed: {}", detail));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -141,42 +147,51 @@ fn parse_scan_output(output: &str) -> Result<ScanResult, String> {
     })
 }
 
+/// Parse the output of a real `mo clean` run.
+///
+/// The report uses the same section/item layout as the dry run, so the verified
+/// item parser is reused. mo's wording for the summary differs between dry runs
+/// ("Potential space:") and real runs, so several labels are accepted and the
+/// summed item sizes act as a fallback.
 fn parse_cleanup_output(output: &str) -> Result<CleanupResult, String> {
-    // Parse actual cleanup output
-    // Extract freed size from output if available
-    let mut freed_size = 0u64;
-    let mut items_removed = 0u32;
+    let clean_output = strip_ansi_codes(output);
 
-    for line in output.lines() {
-        // Look for patterns like "Freed 1.2 GB" or "Removed 5 items"
-        if let Some(size) = extract_freed_size(line) {
-            freed_size = size;
-        }
-        if let Some(count) = extract_items_count(line) {
-            items_removed = count;
-        }
-    }
+    // Only totals are reported back, so item categories are not tracked here.
+    let items: Vec<CleanupItem> = clean_output
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with('\u{2192}'))
+        .filter_map(|line| parse_item_line(line, ""))
+        .collect();
+
+    let summed: u64 = items.iter().map(|i| i.size).sum();
+    let freed_size = extract_cleanup_total(&clean_output).unwrap_or(summed);
 
     Ok(CleanupResult {
         freed_size,
-        items_removed,
-        errors: vec![],
+        items_removed: items.len() as u32,
+        errors: collect_cleanup_errors(&clean_output),
     })
 }
 
-fn extract_freed_size(line: &str) -> Option<u64> {
-    let line_lower = line.to_lowercase();
-    if line_lower.contains("freed") || line_lower.contains("cleaned") {
-        // Try to find a size pattern in the line
-        let words: Vec<&str> = line.split_whitespace().collect();
-        for (i, word) in words.iter().enumerate() {
-            if let Some(size) = parse_size(word) {
-                return Some(size);
-            }
-            // Check if next word is a unit
-            if i + 1 < words.len() {
-                let combined = format!("{}{}", word, words[i + 1]);
-                if let Some(size) = parse_size(&combined) {
+/// Find the reclaimed total on a summary line, accepting the several labels mo
+/// uses across dry runs and real runs.
+fn extract_cleanup_total(output: &str) -> Option<u64> {
+    const LABELS: &[&str] = &[
+        "Freed space:",
+        "Freed:",
+        "Reclaimed:",
+        "Cleaned:",
+        "Space freed:",
+        "Potential space:",
+    ];
+
+    for line in output.lines() {
+        for label in LABELS {
+            if let Some(idx) = line.find(label) {
+                let after = &line[idx + label.len()..];
+                let value = after.split('|').next()?.trim();
+                if let Some(size) = parse_size(value) {
                     return Some(size);
                 }
             }
@@ -185,20 +200,29 @@ fn extract_freed_size(line: &str) -> Option<u64> {
     None
 }
 
-fn extract_items_count(line: &str) -> Option<u32> {
-    let line_lower = line.to_lowercase();
-    if line_lower.contains("removed") || line_lower.contains("deleted") {
-        for word in line.split_whitespace() {
-            if let Ok(count) = word.parse::<u32>() {
-                return Some(count);
-            }
-        }
-    }
-    None
+/// Collect lines mo marks as failures so they surface in the UI instead of
+/// being silently reported as a success.
+///
+/// A successful dry run contains no failure lines, so these markers are matched
+/// defensively: the cross marker plus the usual permission wording.
+fn collect_cleanup_errors(output: &str) -> Vec<String> {
+    output
+        .lines()
+        .map(str::trim)
+        .filter(|line| {
+            let lower = line.to_lowercase();
+            lower.starts_with('\u{2717}')
+                || lower.contains("permission denied")
+                || lower.contains("operation not permitted")
+                || lower.starts_with("error:")
+        })
+        .map(|line| line.trim_start_matches('\u{2717}').trim().to_string())
+        .filter(|line| !line.is_empty())
+        .collect()
 }
 
 /// Strip ANSI color/escape codes from a string
-fn strip_ansi_codes(s: &str) -> String {
+pub(crate) fn strip_ansi_codes(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     let mut chars = s.chars().peekable();
 
@@ -230,36 +254,30 @@ fn parse_item_line(line: &str, section: &str) -> Option<CleanupItem> {
         .trim_start_matches("→")
         .trim();
 
-    // Try to extract size from comma-separated format: "description, SIZEdry" or "description, SIZE dry"
-    // Also try parenthesized format as fallback: "description (SIZE dry)"
     let mut size = 0u64;
-    let mut description = trimmed.to_string();
 
-    // First try: comma-separated format (e.g., "User app cache 150 items, 4.50GB dry")
-    if let Some(last_comma) = trimmed.rfind(',') {
-        let after_comma = trimmed[last_comma + 1..].trim();
-        let size_candidate = after_comma
-            .replace(" dry", "")
-            .replace("dry", "")
-            .trim()
-            .to_string();
-        if let Some(parsed) = parse_size(&size_candidate) {
+    // Split the human-readable description from the trailing size/status text.
+    // mo >= 1.55 uses a middle dot separator ("Chrome cache \u{b7} 3 items, 964.9MB dry");
+    // older builds and the "would clean" form use a comma
+    // ("Chrome Service Worker, would clean 379.9MB, 0 protected").
+    let (desc_part, rest) = match trimmed.find(" \u{b7} ") {
+        Some(idx) => (&trimmed[..idx], &trimmed[idx + " \u{b7} ".len()..]),
+        None => match trimmed.find(',') {
+            Some(idx) => (&trimmed[..idx], &trimmed[idx + 1..]),
+            None => (trimmed, ""),
+        },
+    };
+
+    let description = desc_part.trim().to_string();
+
+    // Scan the trailing text right-to-left for the first token that reads as a size.
+    // This covers "3 items, 964.9MB dry", "964.9MB dry" and
+    // "would clean 379.9MB, 0 protected" with one code path.
+    for token in rest.split_whitespace().rev() {
+        let token = token.trim_matches(|c: char| c == ',' || c == '(' || c == ')');
+        if let Some(parsed) = parse_size(token) {
             size = parsed;
-            description = trimmed[..last_comma].trim().to_string();
-        }
-    }
-
-    // Fallback: parenthesized format (e.g., "description (249.6MB dry)")
-    if size == 0 {
-        if let Some(start) = trimmed.rfind('(') {
-            if let Some(end) = trimmed.rfind(')') {
-                let size_part = &trimmed[start + 1..end];
-                let size_str = size_part.replace(" dry", "").replace("dry", "");
-                if let Some(parsed) = parse_size(size_str.trim()) {
-                    size = parsed;
-                    description = trimmed[..start].trim().to_string();
-                }
-            }
+            break;
         }
     }
 
@@ -312,9 +330,11 @@ fn extract_summary_total(output: &str) -> Option<u64> {
     None
 }
 
-fn parse_size(size_str: &str) -> Option<u64> {
+pub(crate) fn parse_size(size_str: &str) -> Option<u64> {
     let size_str = size_str.to_uppercase();
-    let multiplier = if size_str.ends_with("GB") {
+    let multiplier = if size_str.ends_with("TB") {
+        1024_u64 * 1024 * 1024 * 1024
+    } else if size_str.ends_with("GB") {
         1024 * 1024 * 1024
     } else if size_str.ends_with("MB") {
         1024 * 1024
@@ -333,4 +353,157 @@ fn parse_size(size_str: &str) -> Option<u64> {
     let num: f64 = num_str.parse().ok()?;
 
     Some((num * multiplier as f64) as u64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Helper: parse a line and return (description, size).
+    fn parse(line: &str) -> Option<(String, u64)> {
+        parse_item_line(line, "app caches").map(|i| (i.description, i.size))
+    }
+
+    /// Live check against the `mo` binary actually installed on this machine.
+    /// Ignored by default: it shells out and takes a few minutes.
+    /// Run with: cargo test -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn live_scan_against_installed_mo() {
+        let mo = crate::commands::find_mo_binary().expect("mo CLI not found");
+        let out = std::process::Command::new(mo)
+            .args(["clean", "--dry-run"])
+            .output()
+            .expect("failed to run mo");
+        assert!(out.status.success(), "mo clean --dry-run failed");
+
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let result = parse_scan_output(&stdout).expect("parse failed");
+
+        let item_lines = strip_ansi_codes(&stdout)
+            .lines()
+            .filter(|l| l.trim().starts_with('\u{2192}'))
+            .count();
+
+        eprintln!(
+            "live: {} item lines, {} parsed, total {} bytes",
+            item_lines,
+            result.items.len(),
+            result.total_size
+        );
+        for item in result.items.iter().take(5) {
+            eprintln!("  [{}] {} = {}", item.category, item.description, item.size);
+        }
+
+        assert!(item_lines > 0, "mo produced no item lines");
+        assert!(result.total_size > 0, "total size parsed as zero");
+        // The 1.55 parser should recover the large majority of item lines.
+        assert!(
+            result.items.len() * 100 / item_lines >= 80,
+            "parsed only {}/{} item lines",
+            result.items.len(),
+            item_lines
+        );
+        // Descriptions must not still carry the item count (the 1.55 dot format).
+        assert!(
+            !result.items.iter().any(|i| i.description.ends_with("items")),
+            "description still contains item count"
+        );
+    }
+
+    #[test]
+    fn parses_mo_155_dot_separated_with_item_count() {
+        // mo >= 1.55 format
+        let (desc, size) = parse("  → User app cache · 68 items, 13.83GB dry").unwrap();
+        assert_eq!(desc, "User app cache");
+        assert_eq!(size, (13.83 * 1024.0 * 1024.0 * 1024.0) as u64);
+    }
+
+    #[test]
+    fn parses_mo_155_dot_separated_without_item_count() {
+        // Regression: this shape was dropped entirely before the 1.55 fix
+        let (desc, size) = parse("  → Chrome on-device model cache · 4.27GB dry").unwrap();
+        assert_eq!(desc, "Chrome on-device model cache");
+        assert_eq!(size, (4.27 * 1024.0 * 1024.0 * 1024.0) as u64);
+
+        let (desc, size) = parse("  → Chrome crash reports · 905KB dry").unwrap();
+        assert_eq!(desc, "Chrome crash reports");
+        assert_eq!(size, 905 * 1024);
+    }
+
+    #[test]
+    fn parses_would_clean_form() {
+        // Regression: size sits mid-line, followed by ", 0 protected"
+        let (desc, size) = parse("  → Chrome Service Worker, would clean 379.9MB, 0 protected").unwrap();
+        assert_eq!(desc, "Chrome Service Worker");
+        assert_eq!(size, (379.9 * 1024.0 * 1024.0) as u64);
+    }
+
+    #[test]
+    fn parses_legacy_mo_136_comma_format() {
+        // Older builds had no middle dot; must keep working
+        let (desc, size) = parse("  → User app cache 201 items, 14.56GB dry").unwrap();
+        assert_eq!(desc, "User app cache 201 items");
+        assert_eq!(size, (14.56 * 1024.0 * 1024.0 * 1024.0) as u64);
+    }
+
+    #[test]
+    fn skips_lines_with_no_reclaimable_size() {
+        assert!(parse("  → npm cache · would clean").is_none());
+        assert!(parse("  → Wallpaper aerials temp files · 0B dry").is_none());
+    }
+
+    #[test]
+    fn parse_size_handles_all_units() {
+        assert_eq!(parse_size("512B"), Some(512));
+        assert_eq!(parse_size("905KB"), Some(905 * 1024));
+        assert_eq!(parse_size("1.5MB"), Some((1.5 * 1024.0 * 1024.0) as u64));
+        assert_eq!(parse_size("2TB"), Some(2 * 1024 * 1024 * 1024 * 1024));
+        assert_eq!(parse_size("dry"), None);
+        assert_eq!(parse_size("protected"), None);
+    }
+
+    #[test]
+    fn cleanup_output_sums_item_lines_and_ignores_headers() {
+        let out = "\u{27A4} User essentials\n  \u{2192} User app logs \u{b7} 28 items, 31.3MB dry\n  \u{2192} Chrome cache \u{b7} 964.9MB dry\n  \u{2713} Nothing to clean\n";
+        let r = parse_cleanup_output(out).unwrap();
+        assert_eq!(r.items_removed, 2);
+        assert_eq!(
+            r.freed_size,
+            (31.3 * 1024.0 * 1024.0) as u64 + (964.9 * 1024.0 * 1024.0) as u64
+        );
+        assert!(r.errors.is_empty());
+    }
+
+    #[test]
+    fn cleanup_output_prefers_summary_line_over_item_sum() {
+        let out = "\u{27A4} User essentials\n  \u{2192} User app cache \u{b7} 1GB dry\nFreed space: 42.5GB | Items: 10\n";
+        let r = parse_cleanup_output(out).unwrap();
+        assert_eq!(r.freed_size, (42.5 * 1024.0 * 1024.0 * 1024.0) as u64);
+    }
+
+    #[test]
+    fn cleanup_output_surfaces_failures() {
+        let out = "  \u{2192} Xcode cache \u{b7} 1MB dry\n  \u{2717} /Library/Caches: permission denied\n";
+        let r = parse_cleanup_output(out).unwrap();
+        assert_eq!(r.errors.len(), 1);
+        assert!(r.errors[0].contains("permission denied"));
+    }
+
+    #[test]
+    fn extracts_summary_total_from_mo_155() {
+        let out = "Potential space: 62.41GB | Items: 3803 | Categories: 7";
+        assert_eq!(
+            extract_summary_total(out),
+            Some((62.41 * 1024.0 * 1024.0 * 1024.0) as u64)
+        );
+    }
+
+    #[test]
+    fn strips_ansi_codes_from_legacy_output() {
+        // mo < 1.54 emitted color codes even when redirected
+        let raw = "\x1b[0;33m→\x1b[0m Chrome cache 3 items\x1b[0m, \x1b[0;33m964.9MB dry\x1b[0m";
+        let clean = strip_ansi_codes(raw);
+        assert_eq!(clean, "→ Chrome cache 3 items, 964.9MB dry");
+    }
 }

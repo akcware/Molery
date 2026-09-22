@@ -5,6 +5,7 @@
   import { formatBytes, formatPercentage, formatCpuUsage } from '$lib/utils/format';
   import { uiStore } from '$lib/stores/ui.store.svelte';
   import { statusStore } from '$lib/stores/status.store.svelte';
+  import { cleanStore } from '$lib/stores/clean.store.svelte';
   import Package from 'lucide-svelte/icons/package';
   import Brush from 'lucide-svelte/icons/brush';
   import HardDrive from 'lucide-svelte/icons/hard-drive';
@@ -26,7 +27,7 @@
   </div>
 
   {#if statusStore.loading}
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {#each [1, 2, 3, 4] as _}
         <div class="bg-surface-secondary rounded-xl p-4 animate-pulse">
           <div class="h-8 bg-surface-tertiary rounded mb-2"></div>
@@ -34,7 +35,7 @@
         </div>
       {/each}
     </div>
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
       {#each [1, 2, 3] as _}
         <div class="bg-surface-secondary rounded-xl p-4 animate-pulse">
           <div class="h-8 bg-surface-tertiary rounded mb-2"></div>
@@ -48,7 +49,7 @@
     </div>
   {:else if statusStore.status}
     <!-- Row 1: Disk metrics -->
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <StatCard
         icon={Package}
         value={formatBytes(statusStore.status.diskUsed)}
@@ -57,7 +58,7 @@
       />
       <StatCard
         icon={Brush}
-        value={formatBytes(statusStore.status.cleanableSize)}
+        value={formatBytes(cleanStore.scanResult?.totalSize ?? statusStore.status.cleanableSize)}
         label="Cleanable"
         onclick={() => uiStore.setPanel('clean')}
       />
@@ -75,7 +76,7 @@
     </div>
 
     <!-- Row 2: System info -->
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
       <StatCard
         icon={Monitor}
         value={`macOS ${statusStore.macos?.version ?? '—'}`}
